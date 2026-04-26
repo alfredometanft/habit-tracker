@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Habit Tracker</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#7c6af7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#0f0f13;color:#e8e8f0;min-height:100vh}
+:root{
+  --bg1:#0f0f13;--bg2:#17171f;--bg3:#1e1e2a;--bg4:#25253a;
+  --accent:#7c6af7;--accent2:#a78bfa;--gold:#f59e0b;--green:#10b981;--red:#ef4444;--blue:#3b82f6;
+  --text1:#e8e8f0;--text2:#9999b3;--text3:#6666880;
+  --border:#2a2a3e;
+}
+.app{max-width:900px;margin:0 auto;padding:1.5rem 1rem}
+h1{font-size:1.6rem;font-weight:700;color:#fff;letter-spacing:-0.5px}
+h1 span{color:var(--accent2)}
+.subtitle{color:var(--text2);font-size:.85rem;margin-top:2px}
+
+.nav{display:flex;gap:4px;margin:1.5rem 0 1.2rem;background:var(--bg2);border-radius:12px;padding:4px;border:1px solid var(--border)}
+.nav button{flex:1;padding:.5rem;border:none;background:transparent;color:var(--text2);border-radius:9px;cursor:pointer;font-size:.82rem;font-weight:500;transition:all .2s}
+.nav button.active{background:var(--bg4);color:#fff}
+
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:1.2rem}
+.cards-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.7rem;margin-bottom:1.2rem}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:1rem;text-align:center}
+.stat-card .val{font-size:1.8rem;font-weight:700;color:#fff}
+.stat-card .lbl{font-size:.72rem;color:var(--text2);margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+.stat-card .sub{font-size:.78rem;color:var(--accent2);margin-top:4px}
+
+.habit-item{display:flex;align-items:center;gap:.8rem;padding:.85rem 1rem;background:var(--bg3);border-radius:11px;margin-bottom:.5rem;border:1px solid var(--border);transition:border-color .2s}
+.habit-item.done{border-color:#10b98133;background:#10b98108}
+.check-btn{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;color:transparent;font-size:14px}
+.habit-item.done .check-btn{background:var(--green);border-color:var(--green);color:#fff}
+.habit-info{flex:1;min-width:0}
+.habit-name{font-size:.9rem;font-weight:500;color:var(--text1)}
+.habit-meta{font-size:.75rem;color:var(--text2);margin-top:1px}
+.habit-streak{display:flex;align-items:center;gap:3px;font-size:.78rem;font-weight:600;color:var(--gold)}
+.habit-xp{font-size:.72rem;color:var(--accent2);background:#7c6af720;padding:2px 7px;border-radius:20px}
+.cat-badge{font-size:.65rem;padding:2px 7px;border-radius:20px;font-weight:600}
+.cat-salud{background:#10b98120;color:#10b981}
+.cat-mente{background:#7c6af720;color:var(--accent2)}
+.cat-lectura{background:#3b82f620;color:#3b82f6}
+.cat-alim{background:#f59e0b20;color:#f59e0b}
+
+.progress-wrap{display:flex;align-items:center;justify-content:center;gap:2rem;margin:1rem 0;flex-wrap:wrap}
+.ring-wrap{position:relative;width:130px;height:130px}
+.ring-wrap svg{transform:rotate(-90deg)}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-pct{font-size:1.6rem;font-weight:700;color:#fff}
+.ring-lbl{font-size:.7rem;color:var(--text2)}
+
+.xp-bar-wrap{margin:1rem 0}
+.xp-bar-bg{height:8px;background:var(--bg4);border-radius:99px;overflow:hidden;margin-top:6px}
+.xp-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .5s}
+.xp-info{display:flex;justify-content:space-between;font-size:.75rem;color:var(--text2)}
+
+.badges-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:.6rem;margin-top:.8rem}
+.badge-item{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:.8rem;text-align:center;transition:all .2s}
+.badge-item.unlocked{border-color:var(--gold);background:#f59e0b0a}
+.badge-item.locked{opacity:.45}
+.badge-icon{font-size:1.5rem;margin-bottom:4px}
+.badge-name{font-size:.72rem;font-weight:600;color:var(--text1)}
+.badge-desc{font-size:.65rem;color:var(--text2);margin-top:2px}
+
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:.8rem}
+.cal-day{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.65rem;color:var(--text2);cursor:pointer}
+.cal-day.today{border:1px solid var(--accent)}
+.cal-day.full{background:#10b98140;color:#10b981}
+.cal-day.partial{background:#f59e0b30;color:#f59e0b}
+.cal-day.empty{background:var(--bg3)}
+.cal-day-label{font-size:.65rem;color:var(--text2);text-align:center;padding-bottom:3px}
+
+.motivation-box{background:var(--bg3);border:1px solid var(--accent)33;border-radius:12px;padding:1rem 1.2rem;margin-top:.8rem}
+.motivation-text{font-size:.88rem;color:var(--text1);line-height:1.6;font-style:italic}
+.motivation-meta{font-size:.72rem;color:var(--text2);margin-top:.5rem}
+
+.chart-wrap{position:relative;width:100%;height:220px;margin-top:.8rem}
+
+.sec-title{font-size:.8rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:.7rem}
+.cat-header{font-size:.78rem;font-weight:600;color:var(--text2);margin:.9rem 0 .4rem;text-transform:uppercase;letter-spacing:.5px}
+
+.tab-content{display:none}.tab-content.active{display:block}
+.flex-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:.7rem}
+.ai-btn{padding:.4rem .9rem;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:.78rem;cursor:pointer;font-weight:500}
+.ai-btn:hover{background:var(--accent2)}
+.loading{color:var(--text2);font-size:.82rem;font-style:italic}
+</style>
+</head>
+<body>
+<div class="app">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+    <div>
+      <h1>Habit <span>Tracker</span></h1>
+      <div class="subtitle" id="dateLabel"></div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:.75rem;color:var(--text2)">Nivel</div>
+      <div style="font-size:1.2rem;font-weight:700;color:var(--accent2)" id="levelLabel">Aprendiz</div>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <button class="active" onclick="showTab('hoy',this)">Hoy</button>
+    <button onclick="showTab('stats',this)">Estadísticas</button>
+    <button onclick="showTab('logros',this)">Logros</button>
+    <button onclick="showTab('historial',this)">Historial</button>
+  </nav>
+
+  <div id="tab-hoy" class="tab-content active">
+    <div class="cards-row">
+      <div class="stat-card"><div class="val" id="pctHoy">0%</div><div class="lbl">Hoy</div><div class="sub" id="doneCount">0/9 hábitos</div></div>
+      <div class="stat-card"><div class="val" id="rachaGlobal">🔥0</div><div class="lbl">Racha global</div><div class="sub">días seguidos</div></div>
+      <div class="stat-card"><div class="val" id="xpTotal">0</div><div class="lbl">XP total</div><div class="sub" id="xpNext">Sig. nivel: 200</div></div>
+      <div class="stat-card"><div class="val" id="semanaLabel">0%</div><div class="lbl">Esta semana</div><div class="sub">cumplimiento</div></div>
+    </div>
+
+    <div class="xp-bar-wrap">
+      <div class="xp-info"><span style="font-size:.75rem;color:var(--accent2);font-weight:600" id="xpBarLabel">0 XP</span><span id="xpBarNext">200 XP</span></div>
+      <div class="xp-bar-bg"><div class="xp-bar-fill" id="xpFill" style="width:0%"></div></div>
+    </div>
+
+    <div id="habitList"></div>
+
+    <div class="flex-row" style="margin-top:1rem">
+      <div class="sec-title">Motivación IA</div>
+      <button class="ai-btn" onclick="getMotivation()">Generar ✨</button>
+    </div>
+    <div class="motivation-box"><div class="motivation-text" id="motivText">Pulsa "Generar" para obtener un mensaje motivacional personalizado.</div><div class="motivation-meta" id="motivMeta"></div></div>
+  </div>
+
+  <div id="tab-stats" class="tab-content">
+    <div class="progress-wrap">
+      <div>
+        <div class="ring-wrap">
+          <svg width="130" height="130" viewBox="0 0 130 130">
+            <circle cx="65" cy="65" r="55" fill="none" stroke="#25253a" stroke-width="12"/>
+            <circle cx="65" cy="65" r="55" fill="none" stroke="#7c6af7" stroke-width="12" stroke-linecap="round" id="ringCircle" stroke-dasharray="345.4" stroke-dashoffset="345.4"/>
+          </svg>
+          <div class="ring-center"><div class="ring-pct" id="ringPct">0%</div><div class="ring-lbl">Hoy</div></div>
+        </div>
+      </div>
+      <div style="flex:1;min-width:200px">
+        <div class="sec-title">Cumplimiento por categoría</div>
+        <div id="catStats"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:.8rem">
+      <div class="sec-title">Progreso semanal</div>
+      <div class="chart-wrap"><canvas id="weekChart" role="img" aria-label="Gráfico de cumplimiento semanal">Progreso de los últimos 7 días.</canvas></div>
+    </div>
+    <div class="card" style="margin-top:.8rem">
+      <div class="sec-title">Rachas por hábito</div>
+      <div id="streakList"></div>
+    </div>
+  </div>
+
+  <div id="tab-logros" class="tab-content">
+    <div class="sec-title">Badges desbloqueados</div>
+    <div class="badges-grid" id="badgesGrid"></div>
+    <div class="sec-title" style="margin-top:1.2rem">Resumen del día</div>
+    <div class="motivation-box" id="summaryBox"><div class="motivation-text" id="summaryText">Completa hábitos hoy para ver tu resumen.</div></div>
+  </div>
+
+  <div id="tab-historial" class="tab-content">
+    <div class="card">
+      <div class="sec-title">Calendario — <span id="calMonthLabel"></span></div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+    <div style="margin-top:.8rem;display:flex;gap:1rem;flex-wrap:wrap;font-size:.75rem;color:var(--text2)">
+      <span><span style="display:inline-block;width:12px;height:12px;background:#10b98140;border-radius:3px;margin-right:4px"></span>Completado</span>
+      <span><span style="display:inline-block;width:12px;height:12px;background:#f59e0b30;border-radius:3px;margin-right:4px"></span>Parcial</span>
+      <span><span style="display:inline-block;width:12px;height:12px;background:var(--bg3);border-radius:3px;margin-right:4px"></span>Sin datos</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const HABITS = [
+  {id:'libro1',name:'Leer 20 págs — Libro 1',cat:'Lectura',icon:'📖',xp:15,priority:2},
+  {id:'libro2',name:'Leer 20 págs — Libro 2',cat:'Lectura',icon:'📚',xp:15,priority:2},
+  {id:'dieta',name:'Cumplir con la dieta',cat:'Alimentación',icon:'🥗',xp:20,priority:3},
+  {id:'agua',name:'Beber 2L de agua',cat:'Salud',icon:'💧',xp:10,priority:2},
+  {id:'dormir',name:'Dormir 7-8 horas',cat:'Salud',icon:'💤',xp:15,priority:3},
+  {id:'ejercicio',name:'Ejercicio 60 min',cat:'Salud',icon:'🏋️',xp:25,priority:3},
+  {id:'meditacion',name:'Meditación 10 min',cat:'Mente',icon:'🧘',xp:10,priority:2},
+  {id:'redes',name:'Sin redes por la mañana',cat:'Mente',icon:'📵',xp:10,priority:2},
+  {id:'gratitud',name:'Agradecer 3 cosas',cat:'Mente',icon:'🙏',xp:10,priority:1},
+];
+
+const CAT_CLASS={Lectura:'cat-lectura',Salud:'cat-salud',Mente:'cat-mente',Alimentación:'cat-alim'};
+const CAT_COLOR={Lectura:'#3b82f6',Salud:'#10b981',Mente:'#a78bfa',Alimentación:'#f59e0b'};
+const LEVELS=[{n:'Aprendiz',xp:0},{n:'Constante',xp:200},{n:'Disciplinado',xp:500},{n:'Imparable',xp:1000},{n:'Maestro',xp:2000}];
+const todayKey=new Date().toISOString().split('T')[0];
+
+function loadState(){try{return JSON.parse(localStorage.getItem('ht_state')||'{}')}catch{return{}}}
+function saveState(s){localStorage.setItem('ht_state',JSON.stringify(s))}
+
+let state=loadState();
+if(!state.history)state.history={};
+if(!state.xp)state.xp=0;
+if(!state.history[todayKey])state.history[todayKey]=[];
+
+function todayDone(){return state.history[todayKey]||[]}
+function isChecked(id){return todayDone().includes(id)}
+
+function toggle(id){
+  let d=todayDone();
+  if(d.includes(id)){
+    state.history[todayKey]=d.filter(x=>x!==id);
+    const h=HABITS.find(h=>h.id===id);
+    state.xp=Math.max(0,state.xp-(h?h.xp:10));
+  }else{
+    state.history[todayKey]=[...d,id];
+    const h=HABITS.find(h=>h.id===id);
+    state.xp=(state.xp||0)+(h?h.xp:10);
+  }
+  saveState(state);render();
+}
+
+function getStreak(id){
+  let streak=0;
+  for(let i=0;i<365;i++){
+    const k=new Date(Date.now()-i*864e5).toISOString().split('T')[0];
+    if(state.history[k]&&state.history[k].includes(id))streak++;
+    else if(i>0)break;
+  }
+  return streak;
+}
+
+function getGlobalStreak(){
+  let streak=0;
+  for(let i=0;i<365;i++){
+    const k=new Date(Date.now()-i*864e5).toISOString().split('T')[0];
+    if((state.history[k]||[]).length===HABITS.length)streak++;
+    else if(i>0)break;
+  }
+  return streak;
+}
+
+function getLevel(xp){let l=LEVELS[0];for(const lv of LEVELS)if(xp>=lv.xp)l=lv;return l;}
+function getNextLevel(xp){for(const lv of LEVELS)if(xp<lv.xp)return lv;return null;}
+function getWeekPct(){let t=0,d=0;for(let i=0;i<7;i++){const k=new Date(Date.now()-i*864e5).toISOString().split('T')[0];t+=HABITS.length;d+=(state.history[k]||[]).length;}return t?Math.round(d/t*100):0;}
+
+function render(){
+  const done=todayDone();
+  const pct=Math.round(done.length/HABITS.length*100);
+  document.getElementById('pctHoy').textContent=pct+'%';
+  document.getElementById('doneCount').textContent=done.length+'/'+HABITS.length+' hábitos';
+  document.getElementById('rachaGlobal').textContent='🔥'+getGlobalStreak();
+  document.getElementById('xpTotal').textContent=state.xp;
+  document.getElementById('semanaLabel').textContent=getWeekPct()+'%';
+
+  const lv=getLevel(state.xp),nextLv=getNextLevel(state.xp);
+  document.getElementById('levelLabel').textContent=lv.n;
+  document.getElementById('xpBarLabel').textContent=state.xp+' XP';
+  if(nextLv){
+    document.getElementById('xpBarNext').textContent=nextLv.xp+' XP';
+    document.getElementById('xpNext').textContent='Sig. nivel: '+nextLv.xp;
+    document.getElementById('xpFill').style.width=Math.round((state.xp-lv.xp)/(nextLv.xp-lv.xp)*100)+'%';
+  }else{
+    document.getElementById('xpFill').style.width='100%';
+    document.getElementById('xpBarNext').textContent='MAX';
+    document.getElementById('xpNext').textContent='Nivel máximo';
+  }
+
+  const cats=[...new Set(HABITS.map(h=>h.cat))];
+  const listEl=document.getElementById('habitList');
+  listEl.innerHTML='';
+  cats.forEach(cat=>{
+    const div=document.createElement('div');
+    div.innerHTML=`<div class="cat-header">${cat}</div>`;
+    HABITS.filter(h=>h.cat===cat).forEach(h=>{
+      const checked=done.includes(h.id),streak=getStreak(h.id);
+      div.innerHTML+=`<div class="habit-item ${checked?'done':''}" id="hi-${h.id}">
+        <button class="check-btn" onclick="toggle('${h.id}')">${checked?'✓':''}</button>
+        <div class="habit-info">
+          <div class="habit-name">${h.icon} ${h.name}</div>
+          <div class="habit-meta" style="display:flex;gap:6px;align-items:center;margin-top:3px">
+            <span class="cat-badge ${CAT_CLASS[h.cat]}">${h.cat}</span>
+            ${streak>0?`<span class="habit-streak">🔥 ${streak}</span>`:''}
+          </div>
+        </div>
+        <span class="habit-xp">+${h.xp} XP</span>
+      </div>`;
+    });
+    listEl.appendChild(div);
+  });
+
+  const circ=2*Math.PI*55;
+  document.getElementById('ringCircle').style.strokeDashoffset=circ*(1-pct/100);
+  document.getElementById('ringPct').textContent=pct+'%';
+
+  const catEl=document.getElementById('catStats');
+  catEl.innerHTML='';
+  cats.forEach(cat=>{
+    const hs=HABITS.filter(h=>h.cat===cat);
+    const catDone=hs.filter(h=>done.includes(h.id)).length;
+    const catPct=Math.round(catDone/hs.length*100);
+    catEl.innerHTML+=`<div style="margin-bottom:.6rem">
+      <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--text2);margin-bottom:3px">
+        <span>${cat}</span><span style="color:#fff;font-weight:600">${catPct}%</span>
+      </div>
+      <div style="height:6px;background:var(--bg4);border-radius:99px;overflow:hidden">
+        <div style="height:100%;width:${catPct}%;background:${CAT_COLOR[cat]};border-radius:99px;transition:width .4s"></div>
+      </div>
+    </div>`;
+  });
+
+  const slEl=document.getElementById('streakList');
+  slEl.innerHTML='';
+  HABITS.forEach(h=>{
+    const s=getStreak(h.id);
+    slEl.innerHTML+=`<div style="display:flex;align-items:center;gap:.6rem;padding:.45rem 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:1rem">${h.icon}</span>
+      <span style="flex:1;font-size:.82rem;color:var(--text1)">${h.name}</span>
+      <span style="font-size:.82rem;font-weight:700;color:var(--gold)">🔥 ${s} días</span>
+    </div>`;
+  });
+
+  renderBadges(done);renderCalendar();renderWeekChart();renderSummary(done,pct);
+  document.getElementById('dateLabel').textContent=new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+}
+
+function renderBadges(done){
+  const BADGES=[
+    {icon:'⭐',name:'Primer día',desc:'Completa 1 hábito',unlocked:state.xp>=10},
+    {icon:'🔥',name:'En racha',desc:'3 días seguidos',unlocked:getGlobalStreak()>=3},
+    {icon:'💎',name:'Semana perfecta',desc:'7 días seguidos',unlocked:getGlobalStreak()>=7},
+    {icon:'🏆',name:'Perfeccionista',desc:'100% en un día',unlocked:done.length===HABITS.length},
+    {icon:'📚',name:'Lector',desc:'Ambos libros al día',unlocked:done.includes('libro1')&&done.includes('libro2')},
+    {icon:'💪',name:'Guerrero',desc:'Ejercicio 5 días',unlocked:Array.from({length:30},(_,i)=>new Date(Date.now()-i*864e5).toISOString().split('T')[0]).filter(k=>(state.history[k]||[]).includes('ejercicio')).length>=5},
+    {icon:'🧠',name:'Mente sana',desc:'XP > 200',unlocked:state.xp>=200},
+    {icon:'🌟',name:'Imparable',desc:'XP > 500',unlocked:state.xp>=500},
+  ];
+  document.getElementById('badgesGrid').innerHTML=BADGES.map(b=>`
+    <div class="badge-item ${b.unlocked?'unlocked':'locked'}">
+      <div class="badge-icon">${b.icon}</div>
+      <div class="badge-name">${b.name}</div>
+      <div class="badge-desc">${b.desc}</div>
+    </div>`).join('');
+}
+
+function renderCalendar(){
+  const now=new Date(),year=now.getFullYear(),month=now.getMonth();
+  const firstDay=new Date(year,month,1).getDay(),days=new Date(year,month+1,0).getDate();
+  const DAYS=['D','L','M','X','J','V','S'];
+  const el=document.getElementById('calGrid');
+  const monthNames=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  document.getElementById('calMonthLabel').textContent=monthNames[month]+' '+year;
+  el.innerHTML=DAYS.map(d=>`<div class="cal-day-label">${d}</div>`).join('');
+  for(let i=0;i<(firstDay||7)-1;i++)el.innerHTML+=`<div></div>`;
+  for(let d=1;d<=days;d++){
+    const k=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const h=state.history[k]||[];
+    const isToday=k===todayKey;
+    let cls='empty';
+    if(h.length===HABITS.length)cls='full';
+    else if(h.length>0)cls='partial';
+    el.innerHTML+=`<div class="cal-day ${cls} ${isToday?'today':''}" title="${h.length}/${HABITS.length} hábitos">${d}</div>`;
+  }
+}
+
+let weekChartInstance=null;
+function renderWeekChart(){
+  const labels=[],data=[];
+  const DAY_NAMES=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  for(let i=6;i>=0;i--){
+    const dt=new Date(Date.now()-i*864e5);
+    const k=dt.toISOString().split('T')[0];
+    labels.push(DAY_NAMES[dt.getDay()]);
+    data.push(Math.round((state.history[k]||[]).length/HABITS.length*100));
+  }
+  const ctx=document.getElementById('weekChart');
+  if(weekChartInstance)weekChartInstance.destroy();
+  weekChartInstance=new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[{label:'%',data,backgroundColor:data.map(v=>v===100?'#10b98190':v>=50?'#7c6af790':'#ef444460'),borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+'%'}}},scales:{y:{min:0,max:100,ticks:{color:'#9999b3',callback:v=>v+'%'},grid:{color:'#2a2a3e'}},x:{ticks:{color:'#9999b3'},grid:{display:false}}}}
+  });
+}
+
+function renderSummary(done,pct){
+  const el=document.getElementById('summaryText');
+  if(!done.length){el.textContent='Completa hábitos hoy para ver tu resumen.';return;}
+  const pending=HABITS.filter(h=>!done.includes(h.id)).map(h=>h.name);
+  el.textContent=`Hoy llevas ${done.length} de ${HABITS.length} hábitos (${pct}%). ${pending.length?'Pendiente: '+pending.slice(0,2).join(', ')+(pending.length>2?'...':'')+'.' :'¡Día perfecto!'}`;
+}
+
+async function getMotivation(){
+  const done=todayDone(),pct=Math.round(done.length/HABITS.length*100),streak=getGlobalStreak();
+  const pending=HABITS.filter(h=>!done.includes(h.id)).map(h=>h.name);
+  const el=document.getElementById('motivText'),meta=document.getElementById('motivMeta');
+  el.textContent='Generando...';el.className='motivation-text loading';meta.textContent='';
+  const prompt=`Eres un coach de hábitos motivador y cercano. El usuario lleva hoy ${done.length} de 9 hábitos completados (${pct}%). Su racha global es de ${streak} días. ${pending.length?'Pendientes: '+pending.join(', '):' Ha completado todos los hábitos.'}. Escríbele un mensaje motivacional corto (2-3 frases), positivo y directo. Sin asteriscos ni markdown. En español de España.`;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const data=await res.json();
+    el.textContent=data.content?.map(c=>c.text||'').join('')||'Sigue adelante, cada hábito cuenta.';
+    el.className='motivation-text';
+    meta.textContent='— Coach IA · '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){el.textContent='No se pudo conectar con la IA. ¡Pero tú puedes solo!';el.className='motivation-text';}
+}
+
+function showTab(id,btn){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='stats')setTimeout(renderWeekChart,50);
+}
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('/service-worker.js'));
+}
+
+render();
+</script>
+</body>
+</html>
